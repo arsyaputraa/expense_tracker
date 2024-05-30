@@ -14,7 +14,8 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as ProtectedImport } from './routes/_protected'
 import { Route as AuthImport } from './routes/_auth'
 import { Route as AboutIndexImport } from './routes/about/index'
-import { Route as AuthIndexImport } from './routes/_auth/index'
+import { Route as ProtectedIndexImport } from './routes/_protected/index'
+import { Route as ProtectedProfileIndexImport } from './routes/_protected/profile/index'
 import { Route as ProtectedExpensesIndexImport } from './routes/_protected/expenses/index'
 import { Route as ProtectedExpensesCreateImport } from './routes/_protected/expenses/create'
 import { Route as AuthAuthSignupImport } from './routes/_auth/auth/signup'
@@ -37,9 +38,14 @@ const AboutIndexRoute = AboutIndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const AuthIndexRoute = AuthIndexImport.update({
+const ProtectedIndexRoute = ProtectedIndexImport.update({
   path: '/',
-  getParentRoute: () => AuthRoute,
+  getParentRoute: () => ProtectedRoute,
+} as any)
+
+const ProtectedProfileIndexRoute = ProtectedProfileIndexImport.update({
+  path: '/profile/',
+  getParentRoute: () => ProtectedRoute,
 } as any)
 
 const ProtectedExpensesIndexRoute = ProtectedExpensesIndexImport.update({
@@ -74,9 +80,9 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedImport
       parentRoute: typeof rootRoute
     }
-    '/_auth/': {
-      preLoaderRoute: typeof AuthIndexImport
-      parentRoute: typeof AuthImport
+    '/_protected/': {
+      preLoaderRoute: typeof ProtectedIndexImport
+      parentRoute: typeof ProtectedImport
     }
     '/about/': {
       preLoaderRoute: typeof AboutIndexImport
@@ -98,20 +104,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedExpensesIndexImport
       parentRoute: typeof ProtectedImport
     }
+    '/_protected/profile/': {
+      preLoaderRoute: typeof ProtectedProfileIndexImport
+      parentRoute: typeof ProtectedImport
+    }
   }
 }
 
 // Create and export the route tree
 
 export const routeTree = rootRoute.addChildren([
-  AuthRoute.addChildren([
-    AuthIndexRoute,
-    AuthAuthLoginRoute,
-    AuthAuthSignupRoute,
-  ]),
+  AuthRoute.addChildren([AuthAuthLoginRoute, AuthAuthSignupRoute]),
   ProtectedRoute.addChildren([
+    ProtectedIndexRoute,
     ProtectedExpensesCreateRoute,
     ProtectedExpensesIndexRoute,
+    ProtectedProfileIndexRoute,
   ]),
   AboutIndexRoute,
 ])

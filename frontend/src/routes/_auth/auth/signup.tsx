@@ -2,6 +2,7 @@ import { register } from "@/api/auth/mutation";
 import { validateAuth } from "@/api/auth/query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { queryClient } from "@/lib/query";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 
@@ -21,6 +22,8 @@ function SignUpPage() {
   const { mutate, data, isPending } = useMutation({
     mutationFn: register,
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["validate-current-user"] });
+
       if (!!data.data) navigate({ to: "/" });
     },
   });

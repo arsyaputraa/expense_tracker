@@ -1,53 +1,111 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { createExpenseSchema, type Expense } from "../../schema/expenses";
+import { createExpenseSchema, type Expense } from "../schema/expenses";
 import { getZodSafeParseError } from "../../utils/helper";
 import { zValidator } from "@hono/zod-validator";
-
-const fakeExpenses: Expense[] = [
-  { id: 1, title: "Coffee", amount: 4 },
-  { id: 2, title: "Lunch", amount: 12 },
-  { id: 3, title: "Bus Ticket", amount: 2 },
-  { id: 4, title: "Book", amount: 15 },
-  { id: 5, title: "Groceries", amount: 35 },
-];
+import { db } from "../db";
+import { expenseTable } from "../db/schema";
+import { validateRequest } from "../middlewares/auth";
+import { and, eq, sum } from "drizzle-orm";
 
 const expensesRoute = new Hono()
-  .get("/", async (c) => {
-    return c.json({ data: fakeExpenses, error: null });
+  .use(validateRequest)
+  .get("/", validateRequest, async (c) => {
+    try {
+      const user = c.var.user;
+      const expenses = await db
+        .select()
+        .from(expenseTable)
+        .where(eq(expenseTable.userId, user.id));
+      return c.json({ data: expenses, error: null });
+    } catch (e) {
+      return c.json(
+        {
+          data: null,
+          error: { message: "Internal server error" },
+        },
+        500
+      );
+    }
   })
   .post("/", zValidator("json", createExpenseSchema), async (c) => {
-    const expense = c.req.valid("json");
+    try {
+      const user = c.var.user;
+      const newExpense = c.req.valid("json");
 
-    fakeExpenses.push({ ...expense, id: fakeExpenses.length + 1 });
-    c.status(201);
+      const result = await db.insert(expenseTable).values({
+        ...newExpense,
+        amount: newExpense.amount.toString(),
+        userId: user.id as number,
+      });
 
-    return c.json({ data: expense, error: null });
+      c.status(201);
+
+      return c.json({ data: result[0], error: null });
+    } catch (e) {
+      console.error(e);
+      return c.json(
+        { data: null, error: { message: "Internal server error" } },
+        500
+      );
+    }
   })
-  .get("/:id{[0-9]+}", (c) => {
-    const id = Number.parseInt(c.req.param("id"));
-    const expense = fakeExpenses.find((item) => item.id === id);
+  .get("/:id{[0-9]+}", async (c) => {
+    try {
+      const user = c.var.user;
+      const id = Number.parseInt(c.req.param("id"));
+      const expense = await db
+        .select()
+        .from(expenseTable)
+        .where(and(eq(expenseTable.userId, user.id), eq(expenseTable.id, id)));
 
-    if (!expense) return c.notFound();
+      if (!expense[0]) return c.notFound();
 
-    return c.json({ data: expense, error: null });
+      return c.json({ data: expense[0], error: null });
+    } catch (e) {
+      console.error(e);
+      return c.json(
+        { data: null, error: { message: "Internal server error" } },
+        500
+      );
+    }
   })
-  .delete("/:id{[0-9]+}", (c) => {
-    const id = Number.parseInt(c.req.param("id"));
-    const index = fakeExpenses.findIndex((item) => item.id === id);
+  .delete("/:id{[0-9]+}", async (c) => {
+    try {
+      const user = c.var.user;
+      const id = Number.parseInt(c.req.param("id"));
 
-    if (index === -1) return c.notFound();
+      const deletedExpense = await db
+        .delete(expenseTable)
+        .where(and(eq(expenseTable.userId, user.id), eq(expenseTable.id, id)))
+        .returning();
 
-    const deletedExpense = fakeExpenses.splice(index, 1)[0];
-
-    return c.json({ data: deletedExpense, error: null });
+      return c.json({ data: deletedExpense[0], error: null });
+    } catch (e) {
+      console.error(e);
+      return c.json(
+        { data: null, error: { message: "Internal server error" } },
+        500
+      );
+    }
   })
-  .get("/total-spent", (c) => {
-    const total = fakeExpenses.reduce(
-      (acc, expense) => acc + expense.amount,
-      0
-    );
-    return c.json({ data: { total }, error: null });
+  .get("/total-spent", async (c) => {
+    try {
+      const user = c.var.user;
+      const result = await db
+        .select({ total: sum(expenseTable.amount) })
+        .from(expenseTable)
+        .where(eq(expenseTable.userId, user.id))
+        .limit(1)
+        .then((res) => res[0]);
+      return c.json({ data: result, error: null }, 200);
+    } catch (e) {
+      console.error(e);
+      return c.json(
+        { data: null, error: { message: "Internal server error" } },
+        500
+      );
+    }
   });
 
 export { expensesRoute };

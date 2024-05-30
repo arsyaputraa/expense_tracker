@@ -1,11 +1,11 @@
 import { setSignedCookie } from "hono/cookie";
 import { sign } from "hono/jwt";
-import type { UserTokenPayload } from "../../schema/user";
+import type { UserTokenPayload } from "../schema/user";
 
 export const getNewToken = async (user: UserTokenPayload) => {
   const tokenPayload = {
     data: { user },
-    exp: Math.floor(Date.now() / 1000) + 60 * 15, // Token expires in 5 minutes
+    exp: Math.floor(Date.now() / 1000) + 60 * 15, // Token expires in 15 minutes
   };
 
   const token = await sign(tokenPayload, process.env.JWT_SECRET!);

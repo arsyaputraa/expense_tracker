@@ -8,6 +8,13 @@
       "when": 1716888603518,
       "tag": "0000_massive_fantastic_four",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1717053696480,
+      "tag": "0001_wide_wong",
+      "breakpoints": true
     }
   ]
 }

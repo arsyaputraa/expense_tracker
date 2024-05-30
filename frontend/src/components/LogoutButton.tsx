@@ -4,9 +4,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { logout } from "@/api/auth/mutation";
 import { useNavigate } from "@tanstack/react-router";
 import { queryClient } from "@/lib/query";
+import { userQueryOptions } from "@/api/auth/query";
 
 const LogoutButton = () => {
   const navigate = useNavigate();
+
+  const { data } = useQuery(userQueryOptions);
   const { mutate, isPending } = useMutation({
     mutationKey: ["logout-current-user"],
     mutationFn: logout,
@@ -15,16 +18,20 @@ const LogoutButton = () => {
       navigate({ to: "/auth/login" });
     },
   });
-  return (
-    <Button
-      disabled={isPending}
-      onClick={() => {
-        mutate();
-      }}
-    >
-      {isPending ? "Loading..." : "Logout"}
-    </Button>
-  );
+
+  if (!!data?.data?.user)
+    return (
+      <Button
+        disabled={isPending}
+        onClick={() => {
+          mutate();
+        }}
+      >
+        {isPending ? "Loading..." : "Logout"}
+      </Button>
+    );
+
+  return;
 };
 
 export default LogoutButton;

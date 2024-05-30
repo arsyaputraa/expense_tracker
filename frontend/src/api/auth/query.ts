@@ -12,5 +12,5 @@ export const validateAuth = async () => {
 export const userQueryOptions = queryOptions({
   queryKey: ["validate-current-user"],
   queryFn: validateAuth,
-  staleTime: Infinity,
+  staleTime: 1000 * 60 * 15,
 });

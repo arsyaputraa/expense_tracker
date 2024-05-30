@@ -6,6 +6,10 @@ import { FieldApi, useForm } from "@tanstack/react-form";
 import { ChangeEvent } from "react";
 import { api } from "@/lib/api";
 
+import { zodValidator } from "@tanstack/zod-form-adapter";
+import { z } from "zod";
+import { createExpenseSchema } from "@server/schema/expenses";
+
 export const Route = createFileRoute("/_protected/expenses/create")({
   component: CreateExpense,
 });
@@ -13,9 +17,10 @@ export const Route = createFileRoute("/_protected/expenses/create")({
 function CreateExpense() {
   const navigate = useNavigate();
   const form = useForm({
+    validatorAdapter: zodValidator,
     defaultValues: {
       title: "",
-      amount: 0,
+      amount: "0",
     },
     onSubmit: async ({ value }) => {
       const res = await api.expenses.$post({ json: value });
@@ -37,6 +42,10 @@ function CreateExpense() {
         <div className="grid w-full items-center gap-1.5 mb-2">
           <form.Field
             name="title"
+            validators={{
+              onChange: createExpenseSchema.shape.title,
+              onChangeAsyncDebounceMs: 500,
+            }}
             children={(field) => (
               <>
                 <Label htmlFor={field.name}>title</Label>
@@ -55,6 +64,10 @@ function CreateExpense() {
         <div className="grid w-full items-center gap-1.5 mb-2">
           <form.Field
             name="amount"
+            validators={{
+              onChange: createExpenseSchema.shape.amount,
+              onChangeAsyncDebounceMs: 500,
+            }}
             children={(field) => (
               <>
                 <Label htmlFor={field.name}>amount</Label>
@@ -65,7 +78,7 @@ function CreateExpense() {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    field.handleChange(Number(e.target.value))
+                    field.handleChange(e.target.value)
                   }
                 />
                 <FieldInfo field={field} />
@@ -99,7 +112,7 @@ function FieldInfo({ field }: { field: FieldApi<any, any, any, any> }) {
   return (
     <>
       {field.state.meta.touchedErrors ? (
-        <em>{field.state.meta.touchedErrors}</em>
+        <em className="text-red-300">{field.state.meta.touchedErrors}</em>
       ) : null}
       {field.state.meta.isValidating ? "Validating..." : null}
     </>

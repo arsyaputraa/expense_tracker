@@ -1,7 +1,7 @@
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { jwt, sign, verify } from "hono/jwt";
-import type { UserTokenPayload } from "../../schema/user";
+import type { UserTokenPayload } from "../schema/user";
 
 type Env = {
   Variables: {
@@ -16,35 +16,31 @@ export const validateRequest = createMiddleware<Env>(async (c, next) => {
       process.env.TOKEN_COOKIE_NAME!
     );
 
-    if (!!token) {
+    try {
       const tokenPayload: { data: { user: UserTokenPayload } } = await verify(
-        token as string,
+        token?.toString() as string,
         process.env.JWT_SECRET!
       );
-      if (!!tokenPayload) {
-        console.log("setting userrr", tokenPayload);
-        c.set("user", tokenPayload.data.user);
-        return await next();
-      }
-    } else {
+      console.log("hasil verify access token", tokenPayload);
+
+      c.set("user", tokenPayload.data.user);
+      return await next();
+    } catch (e) {
       const refresh = await getSignedCookie(
         c,
         process.env.COOKIE_SECRET!,
         process.env.TOKEN_REFRESH_NAME!
       );
 
-      if (!!refresh) {
+      if (!refresh) {
+        deleteCookie(c, process.env.TOKEN_REFRESH_NAME!);
+        deleteCookie(c, process.env.TOKEN_COOKIE_NAME!);
+        return c.json({ data: null, error: { message: "Unauthorized" } }, 401);
+      }
+
+      try {
         const refreshPayload: { data: { user: UserTokenPayload } } =
           await verify(refresh as string, process.env.JWT_SECRET!);
-        if (!refreshPayload) {
-          deleteCookie(c, process.env.TOKEN_REFRESH_NAME!);
-          deleteCookie(c, process.env.TOKEN_COOKIE_NAME!);
-
-          return c.json(
-            { data: null, error: { message: "Unauthorized" } },
-            401
-          );
-        }
 
         const freshToken = await sign(
           {
@@ -54,17 +50,19 @@ export const validateRequest = createMiddleware<Env>(async (c, next) => {
           process.env.JWT_SECRET!
         );
 
+        console.log("this request generate fresh token", freshToken);
         await setSignedCookie(
           c,
           process.env.TOKEN_COOKIE_NAME!,
           freshToken,
           process.env.COOKIE_SECRET!
         );
-        console.log("setting userrr refresh", refreshPayload.data.user);
 
         c.set("user", refreshPayload.data.user);
         return await next();
-      } else {
+      } catch (e) {
+        deleteCookie(c, process.env.TOKEN_REFRESH_NAME!);
+        deleteCookie(c, process.env.TOKEN_COOKIE_NAME!);
         return c.json({ data: null, error: { message: "Unauthorized" } }, 401);
       }
     }

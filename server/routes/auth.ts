@@ -2,7 +2,7 @@ import { compare, genSalt, hash } from "bcrypt";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { deleteCookie } from "hono/cookie";
-import type { UserTokenPayload } from "../../schema/user";
+import type { UserTokenPayload } from "../schema/user";
 import { db } from "../db";
 import { userTable } from "../db/schema";
 import { validateRequest } from "../middlewares/auth";
