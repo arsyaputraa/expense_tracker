@@ -16,6 +16,8 @@ export const validateRequest = createMiddleware<Env>(async (c, next) => {
       process.env.TOKEN_COOKIE_NAME!
     );
 
+    console.log("token", token);
+
     try {
       const tokenPayload: { data: { user: UserTokenPayload } } = await verify(
         token?.toString() as string,
